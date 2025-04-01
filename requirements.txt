@@ -4,3 +4,6 @@ sqlalchemy
 databases[aiosqlite]
 python-dotenv
 asgi-correlation-id
+passlib
+bcrypt
+jose[cryptography]

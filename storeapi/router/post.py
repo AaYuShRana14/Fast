@@ -1,20 +1,35 @@
 from fastapi import APIRouter, HTTPException
 from storeapi.models.post import Post, PostData, Comment, CommentData, User, UserData
 from storeapi.database import database, post_table, comment_table, user_table
+from storeapi.security import createToken, get_password_hash, verify_password, get_current_user
 import logging
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
-@router.post("/signup", response_model=User)
+
+@router.post("/signup")
 async def signup(user: UserData):
     data=user.model_dump()
     query=user_table.select().where(user_table.c.name==data["name"])
     existing_user=await database.fetch_one(query)
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
+    data["password"]=get_password_hash(data["password"])
     query=user_table.insert().values(**data)
     user_id=await database.execute(query)
-    return {**data,"id":user_id}
-
+    token=createToken(data["name"])
+    return {"id":user_id,"token":token}
+@router.post("/login")
+async def login(user: UserData):
+    data=user.model_dump()
+    query=user_table.select().where(user_table.c.name==data["name"])
+    existing_user=await database.fetch_one(query)
+    if not existing_user:
+        raise HTTPException(status_code=400, detail="User does not exist")
+    if not verify_password(data["password"], existing_user["password"]):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+    token=createToken(data["name"])
+    return {"message":"Login successful","token":token}
 @router.post("/post", response_model=Post)
 async def create_post(post:PostData):
     data=post.model_dump()
@@ -62,3 +77,7 @@ async def get_post_owner(id:int):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"name":user["name"]}
+
+@router.post("/authenticate/{token}")
+async def getuserbytoken(token:str):
+    return get_current_user(token)
