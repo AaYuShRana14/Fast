@@ -8,7 +8,6 @@ class User(UserData):
 
 class PostData(BaseModel):
     body: str
-    owner: int
 
 class Post(PostData):
     id: int
@@ -17,8 +16,10 @@ class Post(PostData):
 class CommentData(BaseModel):
     body: str
     post_id: int
-    owner: int
 
 class Comment(CommentData):
     id: int
 
+class PostWithLikes(BaseModel):
+    body: str
+    likes: int
