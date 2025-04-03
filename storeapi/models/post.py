@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 class UserData(BaseModel):
     name: str
+    email: str
     password: str
 
 class User(UserData):
@@ -23,3 +24,7 @@ class Comment(CommentData):
 class PostWithLikes(BaseModel):
     body: str
     likes: int
+
+class loginData(BaseModel):
+    email: str
+    password: str

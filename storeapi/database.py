@@ -7,6 +7,8 @@ user_table = sqlalchemy.Table(
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
     sqlalchemy.Column("name", sqlalchemy.String(255)),
+    sqlalchemy.Column("email", sqlalchemy.String(255)),
+    sqlalchemy.Column("verified", sqlalchemy.Boolean, default=False),
     sqlalchemy.Column("password", sqlalchemy.String(255)),
 )
 post_table = sqlalchemy.Table(
