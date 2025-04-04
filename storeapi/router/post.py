@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends,Request
+from fastapi import APIRouter, HTTPException, Depends,Request,BackgroundTasks
 import sqlalchemy
 from enum import Enum
-from concurrent.futures import ThreadPoolExecutor
+from storeapi.mail import send_verification_mail
 from storeapi.models.post import Post, PostData, Comment, CommentData, User, UserData,PostWithLikes,loginData
 from storeapi.database import database, post_table, comment_table, user_table,like_table
 from storeapi.security import createToken, get_password_hash, verify_password, get_current_user
@@ -18,7 +18,7 @@ class PostSorting(str, Enum):
 select_post_with_likes=sqlalchemy.select(post_table,sqlalchemy.func.count(like_table.c.id).label("likes")).select_from(post_table.outerjoin(like_table)).group_by(post_table.c.id).group_by(post_table.c.id)
 
 @router.post("/signup")
-async def signup(user: UserData,request:Request):
+async def signup(user: UserData,request:Request,background_tasks:BackgroundTasks):
     data=user.model_dump()
     query=user_table.select().where(user_table.c.email==data["email"])
     existing_user=await database.fetch_one(query)
@@ -31,7 +31,9 @@ async def signup(user: UserData,request:Request):
     token=createToken( data["email"],"auth",user_id)
     logger.info(f"User {data['name']} created with id {user_id}")
     verify_token=createToken( data["email"],"verify",user_id)
-    return {"id":user_id,"token":token,"verify_token":verify_token,"url":request.url_for("verify_user",token=verify_token)}
+    url=request.url_for("verify_user",token=verify_token)
+    background_tasks.add_task(send_verification_mail,data["email"],url)
+    return {"id":user_id,"token":token}
 
 @router.post("/login")
 async def login(user: loginData):
@@ -47,7 +49,6 @@ async def login(user: loginData):
 @router.post("/post", response_model=Post)
 async def create_post(post:PostData,credentials:HTTPAuthorizationCredentials=Depends(security)):
     current_user=await get_current_user(credentials.credentials,"auth")
-    print(current_user)
     if current_user["verified"]==False:
         raise HTTPException(status_code=400, detail="User not verified")
     data=post.model_dump()
@@ -58,7 +59,6 @@ async def create_post(post:PostData,credentials:HTTPAuthorizationCredentials=Dep
 @router.post("/comment", response_model=Comment)
 async def create_comment(comment:CommentData,credentials=Depends(security)):
     current_user=await get_current_user(credentials.credentials,"auth")
-    print(current_user)
     if current_user["verified"]==False:
         raise HTTPException(status_code=400, detail="User not verified")
     data=comment.model_dump()
@@ -138,3 +138,4 @@ async def verify_user(token:str):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
+

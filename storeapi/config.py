@@ -8,6 +8,8 @@ class BaseConfig(BaseSettings):
 class GlobalConfig(BaseConfig):
     DATABASE_URL:Optional[str]=None
     DB_FORCE_ROLL_BACK:bool=False
+    SENDER_MAIL:Optional[str]=None
+    MAIL_PASSKEY:Optional[str]=None
     SECRET_KEY: Optional[str] = None
     ALGORITHM: Optional[str] = None
 
