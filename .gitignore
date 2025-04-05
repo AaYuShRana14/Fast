@@ -5,3 +5,4 @@ data.db
 
 storeapi.log
 .env
+uploads/
