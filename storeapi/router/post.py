@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends,Request,BackgroundTasks,UploadFile
 from fastapi.responses import FileResponse
+from storeapi.task import get_a_joke
 import sqlalchemy
 from enum import Enum
 import datetime
@@ -159,7 +160,7 @@ async def upload_file(file: UploadFile):
             if not data:
                 break
             buffer.write(data.decode("utf-8"))
-    return {"msg": "File uploaded successfully"}
+    return {"msg": "File uploaded successfully", "filename": filepath}
 
 @router.get("/file{filepath}")
 async def get_file(filepath:str):
@@ -167,3 +168,12 @@ async def get_file(filepath:str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return  FileResponse(file_path, media_type="application/octet-stream", filename=filepath)
+
+
+@router.get("/joke")
+async def get_joke(background_tasks:BackgroundTasks,credentials:HTTPAuthorizationCredentials=Depends(security)):
+    current_user=await get_current_user(credentials.credentials,"auth")
+    if current_user["verified"]==False:
+        raise HTTPException(status_code=400, detail="User not verified")
+    background_tasks.add_task(get_a_joke,current_user["email"])
+    return {"message":"Joke will be sent to your email"}

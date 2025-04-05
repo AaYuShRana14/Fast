@@ -18,3 +18,6 @@ async def send_verification_mail(to:str,url:str):
     await send_mail(to,body)
 
 
+async def send_joke_mail(email:str,joke:str):
+    body = f"Here is a joke for you: {joke or 'No joke found'}"
+    await send_mail(email,body)
