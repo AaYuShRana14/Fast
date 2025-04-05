@@ -7,3 +7,4 @@ asgi-correlation-id
 passlib
 bcrypt
 jose[cryptography]
+python-multipart

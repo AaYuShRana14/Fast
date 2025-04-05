@@ -1,17 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends,Request,BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends,Request,BackgroundTasks,UploadFile
+from fastapi.responses import FileResponse
 import sqlalchemy
 from enum import Enum
+import datetime
+import os
 from storeapi.mail import send_verification_mail
 from storeapi.models.post import Post, PostData, Comment, CommentData, User, UserData,PostWithLikes,loginData
 from storeapi.database import database, post_table, comment_table, user_table,like_table
 from storeapi.security import createToken, get_password_hash, verify_password, get_current_user
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 security = HTTPBearer()
-
+datestr = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+basedir=os.path.dirname(os.path.abspath(__name__))
+upload_dir=os.path.join(basedir,"uploads")
+os.makedirs(upload_dir, exist_ok=True)
 class PostSorting(str, Enum):
     asc = "asc"
     desc = "desc"
@@ -139,3 +144,26 @@ async def verify_user(token:str):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+
+@router.post("/upload")
+async def upload_file(file: UploadFile):
+    extension = os.path.splitext(file.filename)[1]
+    name= file.filename.split(".")[0]
+    filepath= f"{name}{datestr}{extension}"
+    savefilepath=os.path.join(upload_dir,filepath)
+    print(savefilepath)
+    with open(savefilepath, "w",encoding="utf-8") as buffer:
+        while True:
+            data = file.file.read(100)
+            if not data:
+                break
+            buffer.write(data.decode("utf-8"))
+    return {"msg": "File uploaded successfully"}
+
+@router.get("/file{filepath}")
+async def get_file(filepath:str):
+    file_path=os.path.join(upload_dir,filepath)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return  FileResponse(file_path, media_type="application/octet-stream", filename=filepath)
