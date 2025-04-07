@@ -148,7 +148,10 @@ async def verify_user(token:str):
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile):
+async def upload_file(file: UploadFile,credentials:HTTPAuthorizationCredentials=Depends(security)):
+    current_user=await get_current_user(credentials.credentials,"auth")
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     extension = os.path.splitext(file.filename)[1]
     name= file.filename.split(".")[0]
     filepath= f"{name}{datestr}{extension}"
